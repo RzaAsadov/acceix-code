@@ -60,7 +60,7 @@ public class Engine extends HttpServlet {
 
 
     public static  Map<String,Object> envs;
-    public static  List<ModuleHelper> modules;
+    public static List<ModuleHelper> modules;
     
     private AuthManager authenticationManager = new  AuthManager();   
 
@@ -68,13 +68,15 @@ public class Engine extends HttpServlet {
         Engine.envs = envs;
     }
 
-    public static void setModules(List<ModuleHelper> modules) {
-        Engine.modules = modules;
+    public static void setModules(List<ModuleHelper> t_modules) {
+        modules = t_modules;
     }
     
     
     
         public RequestObject readRequestParameters(HttpServletRequest request) {
+            
+            
 
                 RequestObject requestObject = new RequestObject();
                 String module=null,action=null;
@@ -135,6 +137,8 @@ public class Engine extends HttpServlet {
                         }
                         
                         if (requestBody != null) {
+                            
+                            System.out.println(requestBody);
                         
                             requestObject.setRequestBody(requestBody);
 
@@ -223,9 +227,10 @@ public class Engine extends HttpServlet {
             //System.out.println("processRequest called #1");
             
 
-            response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1.
-            response.setHeader("Pragma", "no-cache"); // HTTP 1.0.
-            response.setHeader("Expires", "0"); // Proxies.
+                response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate"); // HTTP 1.1.
+                response.setHeader("Pragma", "no-cache"); // HTTP 1.0.
+                response.setHeader("Expires", "0"); // Proxies.
+                
             
                 long maxFileSize = Long.parseLong((String)envs.get("max_upload_size"));
                 long maxRequestSize = Long.parseLong((String)envs.get("max_form_content_size"));
@@ -244,7 +249,7 @@ public class Engine extends HttpServlet {
                         
 
                                     
-                    for (ModuleHelper webModule : Engine.modules) {
+                    for (ModuleHelper webModule : modules) {
                         
                             if (webModule.getModuleName().equals(requestObject.getModule())) {
                                 
@@ -299,6 +304,9 @@ public class Engine extends HttpServlet {
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)  throws ServletException, IOException {
         try {
+            
+            request.setCharacterEncoding("UTF-8");              
+
             processRequest(request, response);
         } catch (ParseException | ClassNotFoundException | org.json.simple.parser.ParseException | SQLException ex) {
             Logger.getLogger(Engine.class.getName()).log(Level.SEVERE, null, ex);
@@ -310,6 +318,9 @@ public class Engine extends HttpServlet {
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
         try {
+            
+            request.setCharacterEncoding("UTF-8");            
+            
             processRequest(request, response);
         } catch (ParseException | ClassNotFoundException | org.json.simple.parser.ParseException | SQLException ex) {
             Logger.getLogger(Engine.class.getName()).log(Level.SEVERE, null, ex);

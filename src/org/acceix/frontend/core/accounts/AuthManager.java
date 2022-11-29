@@ -196,7 +196,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
 
                     try {
                         
-                        /* pass all input frontend 
+                        /* pass all input to frontend 
                         getRequestObject().getParams().forEach( (paramName,paramValue) -> {
                             addToDataModel(paramName, paramValue);
                         }); */
@@ -205,9 +205,23 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                         addToDataModel("default_object_to_load", getParameterOrDefault("default_object_to_load", null));
                         addToDataModel("default_module_to_load", getParameterOrDefault("default_module_to_load", null));
                         addToDataModel("default_action_to_load", getParameterOrDefault("default_action_to_load", null)); 
+                        
+                        String main_page = getDatabaseAdminFunctions().getMainpageOfDomain(getDomain());
+                        
+                        
+                        if (main_page==null) {
+                            setMainPage((String)getGlobalEnvs().get("default_main_page"));
+                        } else {
+                            setMainPage(main_page);
+                        }                        
+                        
                          
-                        renderData("/" + getMainPage());
+                        renderData("/" + main_page);
                     } catch (IOException ex) {
+                        Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (ClassNotFoundException ex) {
+                        Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                    } catch (SQLException ex) {
                         Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     
@@ -266,6 +280,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
 
 
                     String signInPage;
+                    
                     
                     if (domain.equals(getGlobalEnvs().get("admin_domain"))) {
                         signInPage = "signin_admin";
