@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2022 Rza Asadov (rza dot asadov at gmail dot com).
+ * Copyright 2022 Rza Asadov (rza at asadov dot me).
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,7 +28,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import org.acceix.frontend.crud.CoreModule;
 import org.acceix.frontend.crud.models.CrudObject;
-import org.acceix.frontend.crud.ObjectOperations;
+import org.acceix.frontend.crud.ObjectReadOperations;
 import org.acceix.frontend.crud.loaders.ObjectLoader;
 import org.acceix.frontend.crud.models.CrudTable;
 import org.acceix.frontend.helpers.ActionSettings;
@@ -52,9 +52,10 @@ import java.util.logging.Logger;
 import javax.servlet.ServletException;
 import javax.servlet.http.Part;
 import javax.xml.bind.DatatypeConverter;
+import org.acceix.frontend.crud.models.CrudField;
 import org.acceix.frontend.web.commons.DataUtils;
-import org.acceix.ndatabaseclient.DataConnector;
-import org.acceix.ndatabaseclient.MachineDataSet;
+import org.acceix.ndatabaseclient.mysql.DataConnector;
+import org.acceix.ndatabaseclient.dataset.MachineDataSet;
 import org.eclipse.jetty.util.IO;
 import org.json.simple.parser.ParseException;
 
@@ -63,7 +64,7 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
     
     private CrudObject crudObject;
     private CrudTable crudTable;   
-    private ObjectOperations crudOperations;
+    private ObjectReadOperations crudOperations;
     
 
     @Override
@@ -79,9 +80,9 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
             return new UploadManager();
         }    
     
-       public boolean setupAndChecks() {
+        public boolean setupAndChecks() {
         
-                crudOperations = new ObjectOperations(this);
+                crudOperations = new ObjectReadOperations(this);
         
                 String obj = (String) getParameter("obj");
                 String table = (String) getParameter("table");
@@ -94,6 +95,7 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
                     renderData();
                     return false;
                 }
+                
                 
                 crudObject = loader.get(obj);
                 
@@ -115,15 +117,6 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
                                 //return false;
                         }
 
-                        if  (crudObject.isRequireAuth() && !isUserAuthenticatedBySession() && !isAuthenticatedByToken()) {
-                            addToDataModel("message", "Something goes wrong with request authentication!");
-                            addToDataModel("authByToken",isAuthenticatedByToken());
-                            addToDataModel("authBySession",isUserAuthenticatedBySession());
-                            addToDataModel("objectRequireAuth",crudObject.isRequireAuth());
-                            addToDataModel("result", "error");
-                            renderData();
-                            return false;
-                        }
 
                         addToDataModel("cur_obj",crudObject.getName());
                         return true;
@@ -142,8 +135,12 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
         if (setupAndChecks()==false) return;        
         
         try {
-            for (Part part : getHttpServletRequest().getParts())
-            {
+            
+            if (getHttpServletRequest().getParts() == null) {
+                    System.out.println("Multipart error , parts is NULL");
+            }
+            
+            for (Part part : getHttpServletRequest().getParts()) {
                 //System.out.printf("Got Part[%s].size=%s%n", part.getName(), part.getSize());
                 //System.out.printf("Got Part[%s].contentType=%s%n", part.getName(), part.getContentType());
                 //System.out.printf("Got Part[%s].submittedFileName=%s%n", part.getName(), part.getSubmittedFileName());
@@ -300,6 +297,7 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
 
                 }
             }
+            
         } catch (IOException | ServletException ex) {
             Logger.getLogger(UploadManager.class.getName()).log(Level.SEVERE, null, ex);
         } 
@@ -374,34 +372,56 @@ public class UploadManager extends org.acceix.frontend.helpers.ModuleHelper {
     
     public void viewfile() {    
         
+                if (setupAndChecks()==false) return;          
 
-                // Fix it !!!!!!!!!!!!!!!!!!!!!!!
-                if (setupAndChecks()==false) return;
-                
-
-                if (!isRoleAviableForUser(crudObject.getRoleRead())) {
-                    
-                        addToDataModel("result", "error");
-                        addToDataModel("message", "Access denied !");
-                        try {
-                            renderData(crudObject.getTemplateForFiles());
-                        } catch (IOException ex) {
-                            Logger.getLogger(CoreModule.class.getName()).log(Level.SEVERE, null, ex);
-                        }
-                        return;
-                        
-                }    
-                
+        
+                String filesfieldname = getParameterOrDefault("filesfieldname", "");
                 
                 int file_id = Integer.parseInt(getParameterOrDefault("file_id", "-1"));
+                                
+
+
+                CrudField crudField = crudTable.getField(filesfieldname);
+                    
+        
                 
-                String filesfieldname = getParameterOrDefault("filesfieldname", "");
+                if (crudField.getFileStatus()==CrudField.DOCUMENT_SECURITY_PRIVATE) {
+                    
+
+
+                        if  (crudObject.isRequireAuth() && !isUserAuthenticatedBySession() && !isAuthenticatedByToken()) {
+                            addToDataModel("message", "Something goes wrong with request authentication!");
+                            addToDataModel("authByToken",isAuthenticatedByToken());
+                            addToDataModel("authBySession",isUserAuthenticatedBySession());
+                            addToDataModel("objectRequireAuth",crudObject.isRequireAuth());
+                            addToDataModel("result", "error");
+                            renderData();
+                            return ;
+                        }                    
+                
+
+                    if (!isRoleAviableForUser(crudObject.getRoleRead())) {
+
+                            addToDataModel("result", "error");
+                            addToDataModel("message", "Access denied !");
+                            try {
+                                renderData(crudObject.getTemplateForFiles());
+                            } catch (IOException ex) {
+                                Logger.getLogger(CoreModule.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                            return;
+
+                    }    
+                    
+                }
+                
+                
+           
+                
                 
                 if (file_id > -1  && !filesfieldname.isEmpty()) {
                     
-                    //System.out.println("file_id: " + file_id);
-                    //System.out.println("filesfieldname: " + filesfieldname);
-                    //System.out.println("crudobject: " + crudObject.getName());
+
                     
                     
                     try {

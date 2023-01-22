@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2022 Rza Asadov (rza dot asadov at gmail dot com).
+ * Copyright 2022 Rza Asadov (rza at asadov dot me).
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,16 +27,18 @@ package org.acceix.frontend.location;
 
 import org.acceix.frontend.crud.CoreModule;
 import org.acceix.frontend.crud.models.CrudObject;
-import org.acceix.frontend.crud.ObjectOperations;
+import org.acceix.frontend.crud.ObjectReadOperations;
 import org.acceix.frontend.crud.loaders.ObjectLoader;
 import org.acceix.frontend.crud.models.CrudTable;
 import org.acceix.frontend.helpers.ActionSettings;
 import org.acceix.frontend.helpers.ModuleHelper;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.acceix.frontend.crud.ObjectCommonOperations;
 import org.json.simple.parser.ParseException;
 
 
@@ -44,13 +46,15 @@ public class LocationManager extends org.acceix.frontend.helpers.ModuleHelper {
     
     private CrudObject crudObject;
     private CrudTable crudTable;   
-    private ObjectOperations crudOperations;    
+    private ObjectCommonOperations crudCommonOperations;    
+    private ObjectReadOperations crudReadOperations;    
 
 
     @Override
     public void construct() {
         setModuleName("location");
         addAction(new ActionSettings("showlocation", true, this::showlocation));
+        addAction(new ActionSettings("updatelocation", true, this::updatelocation));
 
     }
     
@@ -60,7 +64,8 @@ public class LocationManager extends org.acceix.frontend.helpers.ModuleHelper {
     
     public boolean setupAndChecks() {
         
-                crudOperations = new ObjectOperations(this);
+                crudCommonOperations = new ObjectCommonOperations(this);
+                crudReadOperations = new ObjectReadOperations(this);
         
                 String obj = (String) getParameter("obj");
                 String table = (String) getParameter("table");
@@ -142,7 +147,7 @@ public class LocationManager extends org.acceix.frontend.helpers.ModuleHelper {
 
                 try {
 
-                    Map<String,Object> data = crudOperations.getLocationFromDatabase(crudObject,
+                    Map<String,Object> data = crudReadOperations.getLocationFromDatabase(crudObject,
                                                                                     crudTable,
                                                                                     crudTable.getIdFieldName(),
                                                                                     Integer.valueOf(getParameterOrDefault("row_id","-1")),
@@ -153,6 +158,11 @@ public class LocationManager extends org.acceix.frontend.helpers.ModuleHelper {
                             addToDataModel(dataKey,data.get(dataKey));
                     });
                     
+                    addToDataModel("doafter","loadContainerQuery('crud','read','#netondocontentbody','obj=" + crudObject.getName() + "');");                
+
+                    addToDataModel("row_id",getParameterOrDefault("row_id","-1"));
+                    addToDataModel("submit_to_module", "location");
+                    addToDataModel("submit_to_action", "updatelocation");                    
 
 
                 } catch (ClassNotFoundException | SQLException | IOException | ParseException ex) {
@@ -182,8 +192,65 @@ public class LocationManager extends org.acceix.frontend.helpers.ModuleHelper {
         
     }  
      
-
-     
     
+     public void updatelocation() {
+
+        
+                if (setupAndChecks()==false) return;
+                
+
+                if (!isRoleAviableForUser(crudObject.getRoleRead())) {
+                    
+                        addToDataModel("result", "error");
+                        addToDataModel("message", "Access denied !");
+                        try {
+                            renderData(crudObject.getTemplateForLocation());
+                        } catch (IOException ex) {
+                            Logger.getLogger(CoreModule.class.getName()).log(Level.SEVERE, null, ex);
+                        }
+                        return;
+                        
+                }
+                
+
+                
+                crudObject.setUser_id(getUserId());
+                crudObject.setDomain(getDomain());
+                
+                var inputParams = getRequestObject().getParams();
+
+                var t_inputParams = new LinkedHashMap<String,Object>();
+
+                var iterator = inputParams.keySet().iterator();
+                
+                
+                while (iterator.hasNext()) {
+                    
+                    String key = iterator.next();                    
+                    
+                    if (key.equals("obj")) continue; // bypass object key
+                    if (key.equals("row_id")) continue; // bypass row_id key                    
+                    
+                    
+                    var a_crudField = crudTable.getField(key);
+                    
+                    if (a_crudField != null) {
+                       t_inputParams.put(key, inputParams.get(key));
+                       
+                    }
+                    
+                }
+                
+                int row_id = Integer.parseInt((String)getParameterOrDefault("row_id", "-1"));   
+
+                
+                if (t_inputParams.size() > 0)
+                    crudCommonOperations.updateInDatabaseAndGetId(crudObject.getName(),crudTable.getName(), t_inputParams,row_id);       
+                
+                addToDataModel("message","Data in object \"" + crudObject.getTitle()+ "\" updated !");
+                addToDataModel("result", "success");
+                renderData(); 
+     
+     }
     
 }

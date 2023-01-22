@@ -16,7 +16,7 @@
         </data>
         <references xmlns="http://www.netbeans.org/ns/ant-project-references/1">
             <reference>
-		<foreign-project>acceix-codeeditor</foreign-project>
+                <foreign-project>acceix-codeeditor</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>
@@ -24,7 +24,7 @@
                 <id>jar</id>
             </reference>
             <reference>
-		<foreign-project>acceix-crud</foreign-project>
+                <foreign-project>acceix-crud</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>
@@ -32,7 +32,7 @@
                 <id>jar</id>
             </reference>
             <reference>
-		<foreign-project>acceix-databaseclient</foreign-project>
+                <foreign-project>acceix-databaseclient</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>
@@ -40,7 +40,7 @@
                 <id>jar</id>
             </reference>
             <reference>
-		    <foreign-project>acceix-logger</foreign-project>
+                <foreign-project>acceix-frontend-commons</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>
@@ -48,7 +48,23 @@
                 <id>jar</id>
             </reference>
             <reference>
-	 	<foreign-project>acceix-maintanance</foreign-project>
+                <foreign-project>acceix-frontend-interfaces</foreign-project>
+                <artifact-type>jar</artifact-type>
+                <script>build.xml</script>
+                <target>jar</target>
+                <clean-target>clean</clean-target>
+                <id>jar</id>
+            </reference>
+            <reference>
+                <foreign-project>acceix-logger</foreign-project>
+                <artifact-type>jar</artifact-type>
+                <script>build.xml</script>
+                <target>jar</target>
+                <clean-target>clean</clean-target>
+                <id>jar</id>
+            </reference>
+            <reference>
+                <foreign-project>acceix-maintanance</foreign-project>
                 <artifact-type>jar</artifact-type>
                 <script>build.xml</script>
                 <target>jar</target>

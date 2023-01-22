@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2022 Rza Asadov (rza dot asadov at gmail dot com).
+ * Copyright 2022 Rza Asadov (rza at asadov dot me).
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,13 +26,16 @@ package org.acceix.frontend.core;
 
 
 
-import org.acceix.frontend.core.accounts.AuthManager;
+import java.io.BufferedReader;
+import org.acceix.frontend.core.accounts.Accounts;
 import org.acceix.frontend.helpers.RequestObject;
 import org.acceix.frontend.helpers.ModuleHelper;
 import org.acceix.frontend.web.commons.DataUtils;
 import org.acceix.frontend.web.commons.FrontendSecurity;
-import org.acceix.ndatabaseclient.MachineDataException;
+import org.acceix.ndatabaseclient.exceptions.MachineDataException;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.text.ParseException;
 import javax.servlet.ServletException;
@@ -41,6 +44,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +66,7 @@ public class Engine extends HttpServlet {
     public static  Map<String,Object> envs;
     public static List<ModuleHelper> modules;
     
-    private AuthManager authenticationManager = new  AuthManager();   
+    private Accounts authenticationManager = new  Accounts();   
 
     public static void setEnvs(Map<String, Object> envs) {
         Engine.envs = envs;
@@ -83,13 +87,25 @@ public class Engine extends HttpServlet {
                 
                 Enumeration<String> requestEnum =  request.getParameterNames();
                 
+                Map<String,String> requestParams = new HashMap<>();
+                
+                boolean is_debug_activated = false;
+                
                 if (requestEnum.hasMoreElements()) { // We have params
                     
                         while (requestEnum.hasMoreElements()) {
 
                             String paramkey = requestEnum.nextElement();
                             
-                            //System.out.println(paramkey + ":" + request.getParameter(paramkey));
+                            requestParams.put(paramkey, request.getParameter(paramkey));
+                            
+                            if (paramkey.equals("netondo_debug_mode_x999")) {
+                                if (request.getParameter(paramkey).equals("activated")) {
+                                    is_debug_activated = true;
+                                }
+                            }
+                            
+                            
 
                             switch (paramkey) {
                                 case "module":
@@ -103,6 +119,18 @@ public class Engine extends HttpServlet {
                                     break;
                             }
 
+                        }
+                        
+                        if (is_debug_activated) {
+                            
+                                System.out.println("Input DEBUG");
+                                
+                                requestParams.forEach( (key,value) -> {
+                                   
+                                    System.out.println(key + " = " + value);
+                                    
+                                });
+                            
                         }
 
                         
@@ -137,9 +165,7 @@ public class Engine extends HttpServlet {
                         }
                         
                         if (requestBody != null) {
-                            
-                            System.out.println(requestBody);
-                        
+                                                    
                             requestObject.setRequestBody(requestBody);
 
 
@@ -231,6 +257,20 @@ public class Engine extends HttpServlet {
                 response.setHeader("Pragma", "no-cache"); // HTTP 1.0.
                 response.setHeader("Expires", "0"); // Proxies.
                 
+                
+                    /*
+                        BufferedReader bufr = new BufferedReader(new InputStreamReader(request.getInputStream(),StandardCharsets.UTF_8));
+                
+                        String jsonSTR = "";
+                        String inbuffer;
+
+                        while (( inbuffer = bufr.readLine()) != null) {
+                            jsonSTR = jsonSTR + inbuffer;
+                        }
+
+                        System.out.println(jsonSTR);
+                   */
+                
             
                 long maxFileSize = Long.parseLong((String)envs.get("max_upload_size"));
                 long maxRequestSize = Long.parseLong((String)envs.get("max_form_content_size"));
@@ -242,11 +282,17 @@ public class Engine extends HttpServlet {
             
                 String calledModule = "",licensekey=""; 
                 
+                
 
                 RequestObject requestObject = readRequestParameters(request);
                 
                 if (requestObject==null) return;
                         
+                
+                   if ((boolean)this.envs.get("isAppCreateMode")) {
+                       requestObject.setModule("setup");
+                       requestObject.setAction("databasepage");
+                   }
 
                                     
                     for (ModuleHelper webModule : modules) {
@@ -286,7 +332,7 @@ public class Engine extends HttpServlet {
     
     public static boolean accessCheck(HttpServletRequest request,HttpServletResponse response,List<String> roles,String rolename) {
 
-        if (!FrontendSecurity.isRoleEnabled(roles, rolename)) {
+        if (isRoleEnabled(roles, rolename)) {
             try {
                 FrontendSecurity.securityCaseHandler(request, response);
             } catch (Exception ex) {
@@ -297,6 +343,16 @@ public class Engine extends HttpServlet {
             return true;
         }
     }
+    
+    public static boolean isRoleEnabled(List<String> roles,String rolename) {
+        
+        
+      if (rolename.charAt(rolename.length()-1)=='*') {
+            return roles.stream().anyMatch(role -> (role.startsWith(rolename.substring(0, rolename.length()-1))));          
+        } else {
+            return roles.stream().anyMatch(role -> (role.equals(rolename)));
+        }
+    }       
     
 
     

@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright 2022 Rza Asadov (rza dot asadov at gmail dot com).
+ * Copyright 2022 Rza Asadov (rza at asadov dot me).
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 
 package org.acceix.frontend.core.accounts;
 
-import org.acceix.frontend.crud.menu.MenuManager;
+import org.acceix.frontend.menu.MenuManager;
 import org.acceix.frontend.helpers.ActionSettings;
 import org.acceix.frontend.helpers.ModuleHelper;
 import org.acceix.frontend.web.commons.FrontendSecurity;
@@ -33,16 +33,18 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
+import java.util.Base64;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.acceix.ndatabaseclient.MachineDataException;
+import org.acceix.ndatabaseclient.exceptions.MachineDataException;
 import org.acceix.logger.NLog;
 import org.acceix.logger.NLogBlock;
 import org.acceix.logger.NLogger;
+import org.acceix.ndatabaseclient.dataset.MachineDataSet;
 
 
-public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
+public class Accounts extends org.acceix.frontend.helpers.ModuleHelper {
 
 
         @Override
@@ -61,7 +63,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
         
         
         public ModuleHelper getInstance() {
-            return new AuthManager();
+            return new Accounts();
         }
         
     
@@ -135,7 +137,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                         
                         try {
                         
-                            String token = new FrontendSecurity(getGlobalEnvs()).getTokenByUserId(getUserId());
+                            String token = getTokenByUserId(getUserId());
                             
                             if (token !=null) {
 
@@ -150,7 +152,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                             
 
                         } catch (MachineDataException ex) {
-                            Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                            Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                         }
                         
                         getDatabaseAdminFunctions().addActivityLog(1, getUserId(), getRequestIP(), 3, getRequestHeader("USER-AGENT"));
@@ -174,7 +176,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                 //gotoMainPageOrSigninAgain();
                 
             } catch (ClassNotFoundException | SQLException | IOException | MachineDataException | NoSuchAlgorithmException ex) {
-                Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
             }
                         
             
@@ -218,11 +220,11 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                          
                         renderData("/" + main_page);
                     } catch (IOException ex) {
-                        Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                     } catch (ClassNotFoundException ex) {
-                        Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                     } catch (SQLException ex) {
-                        Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     
             } else {
@@ -264,7 +266,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                         renderData("/" + getMainPage());
                         
                     } catch (IOException ex) {
-                        Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     return;
                 }
@@ -297,7 +299,6 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                             renderData((String)getGlobalEnvs().get("wrong_domain_view_file"));
                         } else {
                             addToDataModel("title", getDatabaseAdminFunctions().getTitleOfDomain(domain));                            
-                            addToDataModel("enable_web_registration",getDatabaseAdminFunctions().getWebRegistrationStatus(domain));
                             renderData("/" + signInPage);                        
                         }
                         
@@ -305,9 +306,9 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                     addToDataModel("result","error");
                     addToDataModel("message", "internal error  code 1984!");    
                     renderData();
-                    Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
-                Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
             }
 
                 
@@ -347,9 +348,9 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                         
                 } catch (ClassNotFoundException | SQLException ex) {
                     addToDataModel("domain_token", "error2");                    
-                    Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                 } catch (IOException ex) {
-                Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
             }
 
                 
@@ -384,7 +385,7 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                             }
                             userid = getDatabaseAdminFunctions().getUserId(username, password,domain_id, 1);
                         } catch (ClassNotFoundException | SQLException | NoSuchAlgorithmException ex) {
-                            Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                            Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                         }
                         
                         if ( userid > -1 ) {
@@ -394,12 +395,12 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
                             try {
                                 md5 = MessageDigest.getInstance("MD5"); // you can change it to SHA1 if needed!
                             } catch (NoSuchAlgorithmException ex) {
-                                Logger.getLogger(AuthManager.class.getName()).log(Level.SEVERE, null, ex);
+                                Logger.getLogger(Accounts.class.getName()).log(Level.SEVERE, null, ex);
                             }
 
                                 md5.update(password.getBytes(), 0, password.length());
 
-                                String token = new FrontendSecurity(getGlobalEnvs()).generateToken(userid, new BigInteger(1, md5.digest()).toString(16)  , domain_id);
+                                String token = generateToken(userid, new BigInteger(1, md5.digest()).toString(16)  , domain_id);
                                 
                                     if (token != null) {
 
@@ -431,6 +432,55 @@ public class AuthManager extends org.acceix.frontend.helpers.ModuleHelper {
             
         }
         
+        public String getTokenByUserId(int user_id) throws MachineDataException {
+            
+                if (user_id==0) return "ADMINTOKENPROHIBITED";
+            
+                MachineDataSet machineDataSet =  getDatabaseAdminFunctions().getUserInfo(user_id);
+                
+                if (machineDataSet.next()) {
+                
+                    String password = machineDataSet.getFirstString("password");
+                    int domain_id = machineDataSet.getFirstInt("domain_id");
+
+                    return generateToken(user_id, password, domain_id);
+                
+                } else {
+                    return null;
+                }
+            
+        }    
+    
+        public String generateToken (int userid,String password,int domain_id) {
+            
+
+                                String token;
+                                
+                                String tokenOfUserId =  Base64.getEncoder().encodeToString(String.valueOf(userid).getBytes());
+
+                                    try {
+                                        
+                                            MessageDigest m = MessageDigest.getInstance("MD5");
+                                            m.update(password.getBytes(),0,password.length());
+
+                                            String tokenOfPassword = Base64.getEncoder().encodeToString(new BigInteger(1,m.digest()).toString(16).getBytes());
+
+                                            token = tokenOfUserId + ":" + tokenOfPassword;
+
+
+                                            return token;
+                                        
+                                        
+                                    } catch (NoSuchAlgorithmException ex) {
+                                        Logger.getLogger(FrontendSecurity.class.getName()).log(Level.SEVERE, null, ex);                                        
+                                        return null;
+                                    }
+                             
+       
+        }            
+      
+       
+                
 
     
 }
